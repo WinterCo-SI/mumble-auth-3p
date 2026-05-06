@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
@@ -25,6 +25,7 @@ pub struct Config {
     pub mumble_url: Option<String>,
     pub mumble_servers: Vec<MumbleServer>,
     pub whitelist: WhitelistConfig,
+    pub cache_path: PathBuf,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -60,6 +61,8 @@ struct ConfigFile {
     whitelist: TierList,
     #[serde(default)]
     groups: BTreeMap<String, TierList>,
+    #[serde(default)]
+    cache: CacheSection,
 }
 
 #[derive(Debug, Deserialize)]
@@ -106,6 +109,20 @@ struct MumbleSection {
     url: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+struct CacheSection {
+    #[serde(default = "default_cache_path")]
+    path: String,
+}
+
+impl Default for CacheSection {
+    fn default() -> Self {
+        Self {
+            path: default_cache_path(),
+        }
+    }
+}
+
 fn default_bind_addr() -> String {
     "0.0.0.0:8080".into()
 }
@@ -117,6 +134,9 @@ fn default_esi_date() -> String {
 }
 fn default_validate_exp() -> bool {
     true
+}
+fn default_cache_path() -> String {
+    "./cache.json".into()
 }
 
 impl Config {
@@ -168,6 +188,7 @@ impl Config {
                 whitelist: raw.whitelist,
                 groups: raw.groups,
             },
+            cache_path: PathBuf::from(raw.cache.path),
         })
     }
 

@@ -14,7 +14,7 @@ path = "src/main.rs"
 
 [dependencies]
 axum = { version = "0.7", features = ["macros"] }
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "sync"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "sync", "fs"] }
 tower-http = { version = "0.6", features = ["trace"] }
 
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }

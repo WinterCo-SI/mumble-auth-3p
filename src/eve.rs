@@ -306,20 +306,54 @@ impl EsiClient {
 
     pub async fn affiliation(&self, char_id: u64) -> Result<Affiliation, AppError> {
         let url = format!("{ESI_BASE}/characters/affiliation/");
-        let list: Vec<Affiliation> = self
+        let res = self
             .http
             .post(url)
             .header("X-Compatibility-Date", &self.compatibility_date)
             .json(&[char_id])
             .send()
-            .await?
-            .error_for_status()?
-            .json()
             .await?;
+        let list: Vec<Affiliation> = esi_json(res, "characters/affiliation").await?;
         list.into_iter()
             .next()
             .ok_or_else(|| AppError::Upstream("empty affiliation response".into()))
     }
+
+    pub async fn alliance(&self, alliance_id: u64) -> Result<AllianceInfo, AppError> {
+        let url = format!("{ESI_BASE}/alliances/{alliance_id}/");
+        let res = self
+            .http
+            .get(url)
+            .header("X-Compatibility-Date", &self.compatibility_date)
+            .send()
+            .await?;
+        esi_json(res, "alliances/{id}").await
+    }
+
+    pub async fn corporation(&self, corp_id: u64) -> Result<CorporationInfo, AppError> {
+        let url = format!("{ESI_BASE}/corporations/{corp_id}/");
+        let res = self
+            .http
+            .get(url)
+            .header("X-Compatibility-Date", &self.compatibility_date)
+            .send()
+            .await?;
+        esi_json(res, "corporations/{id}").await
+    }
+}
+
+async fn esi_json<T: serde::de::DeserializeOwned>(
+    res: reqwest::Response,
+    endpoint: &str,
+) -> Result<T, AppError> {
+    let status = res.status();
+    if !status.is_success() {
+        let body = res.text().await.unwrap_or_default();
+        return Err(AppError::Upstream(format!(
+            "ESI {endpoint} returned {status}: {body}"
+        )));
+    }
+    Ok(res.json().await?)
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -330,4 +364,18 @@ pub struct Affiliation {
     pub alliance_id: Option<u64>,
     #[serde(default)]
     pub faction_id: Option<u64>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct AllianceInfo {
+    pub name: String,
+    pub ticker: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct CorporationInfo {
+    pub name: String,
+    pub ticker: String,
+    #[serde(default)]
+    pub alliance_id: Option<u64>,
 }

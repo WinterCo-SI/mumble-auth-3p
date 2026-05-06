@@ -29,6 +29,14 @@ validate_exp = true
 # Independent of validate_exp -- you can use one, the other, or both.
 # max_age_seconds = 86400
 
+[cache]
+# Persistent on-disk cache of alliance and corporation tickers, resolved
+# lazily as users log in and used to format the Mumble display name as
+# "{alliance_ticker}-{corp_ticker}-{character_name}". Entries are
+# immutable once written -- tickers rarely change and tolerating a stale
+# value is preferable to the cost of refresh.
+path = "./cache.json"
+
 [mumble]
 # Shared bearer token the Mumble auth plugin must send as
 # `Authorization: Bearer <token>` on every POST /auth call.

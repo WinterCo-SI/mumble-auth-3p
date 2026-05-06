@@ -3,6 +3,7 @@ use std::time::Instant;
 
 use dashmap::DashMap;
 
+use crate::affiliation_cache::AffiliationCache;
 use crate::config::Config;
 use crate::eve::{EsiClient, EveSso, JwtPolicy};
 
@@ -12,6 +13,7 @@ pub struct AppState {
     pub sso: Arc<EveSso>,
     pub esi: Arc<EsiClient>,
     pub pkce: Arc<DashMap<String, PkceEntry>>,
+    pub affiliation_cache: Arc<AffiliationCache>,
 }
 
 pub struct PkceEntry {
@@ -37,12 +39,17 @@ impl AppState {
                 max_age_seconds: cfg.jwt_max_age_seconds,
             },
         );
-        let esi = EsiClient::new(http, cfg.esi_compatibility_date.clone());
+        let esi = Arc::new(EsiClient::new(http, cfg.esi_compatibility_date.clone()));
+        let affiliation_cache = Arc::new(AffiliationCache::load(
+            cfg.cache_path.clone(),
+            Arc::clone(&esi),
+        )?);
         Ok(Self {
             cfg: Arc::new(cfg),
             sso: Arc::new(sso),
-            esi: Arc::new(esi),
+            esi,
             pkce: Arc::new(DashMap::new()),
+            affiliation_cache,
         })
     }
 }

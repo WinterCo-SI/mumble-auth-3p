@@ -89,11 +89,46 @@ pub async fn handle(
         return Err(AppError::Forbidden("not in whitelist".into()));
     }
 
+    let corp_ticker = match s.affiliation_cache.corp_ticker(aff.corporation_id).await {
+        Ok(t) => Some(t),
+        Err(e) => {
+            tracing::warn!(corporation_id = aff.corporation_id, error = %e, "corp ticker lookup failed");
+            None
+        }
+    };
+    let alliance_ticker = match aff.alliance_id {
+        Some(alliance_id) => match s.affiliation_cache.alliance_ticker(alliance_id).await {
+            Ok(t) => Some(t),
+            Err(e) => {
+                tracing::warn!(alliance_id, error = %e, "alliance ticker lookup failed");
+                None
+            }
+        },
+        None => None,
+    };
+    let display_name = build_display_name(alliance_ticker.as_deref(), corp_ticker.as_deref(), &claims.name);
+
     Ok(Json(AuthResponse {
         user_id: char_id,
-        display_name: claims.name,
+        display_name,
         groups: decision.groups,
     }))
+}
+
+fn build_display_name(
+    alliance_ticker: Option<&str>,
+    corp_ticker: Option<&str>,
+    character_name: &str,
+) -> String {
+    let mut parts: Vec<&str> = Vec::with_capacity(3);
+    if let Some(t) = alliance_ticker.filter(|s| !s.is_empty()) {
+        parts.push(t);
+    }
+    if let Some(t) = corp_ticker.filter(|s| !s.is_empty()) {
+        parts.push(t);
+    }
+    parts.push(character_name);
+    parts.join("-")
 }
 
 fn ct_eq(a: &[u8], b: &[u8]) -> bool {

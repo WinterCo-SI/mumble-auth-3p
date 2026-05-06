@@ -106,13 +106,17 @@ fn render_picker(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EVE → Mumble</title>
 <style>
-  body {{ font-family: system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 540px; margin: 3em auto; padding: 0 1em; color: #222; }}
+  :root {{ color-scheme: light dark; --bg: #fff; --fg: #222; --muted: #666; --host: #888; --border: #ddd; --border-hover: #999; --hover-bg: #f6f6f6; }}
+  @media (prefers-color-scheme: dark) {{
+    :root {{ --bg: #1a1a1a; --fg: #e6e6e6; --muted: #aaa; --host: #888; --border: #333; --border-hover: #666; --hover-bg: #262626; }}
+  }}
+  body {{ font-family: system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 540px; margin: 3em auto; padding: 0 1em; background: var(--bg); color: var(--fg); }}
   h1 {{ font-size: 1.4em; margin-bottom: 0.25em; }}
-  p {{ color: #666; margin-top: 0; }}
-  .server {{ display: block; padding: 0.9em 1em; margin: 0.5em 0; border: 1px solid #ddd; border-radius: 8px; text-decoration: none; color: inherit; }}
-  .server:hover {{ background: #f6f6f6; border-color: #999; }}
+  p {{ color: var(--muted); margin-top: 0; }}
+  .server {{ display: block; padding: 0.9em 1em; margin: 0.5em 0; border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: inherit; }}
+  .server:hover {{ background: var(--hover-bg); border-color: var(--border-hover); }}
   .title {{ font-weight: 600; }}
-  .host {{ color: #888; font-size: 0.9em; margin-top: 0.2em; }}
+  .host {{ color: var(--host); font-size: 0.9em; margin-top: 0.2em; }}
 </style>
 </head>
 <body>
