@@ -80,8 +80,10 @@ fn render_picker(
 
     let mut links = String::new();
     for srv in &cfg.mumble_servers {
-        let mumble_url = build_mumble_url(srv, &username, jwt, cfg.mumble_url.as_deref())?;
-        let title = srv.title.as_deref().unwrap_or(&srv.host);
+        let server_name = srv.name.as_deref().unwrap_or(&srv.host);
+        let title = format!("{} ({})", cfg.cluster_name, server_name);
+        let mumble_url =
+            build_mumble_url(srv, &username, jwt, &title, cfg.mumble_url.as_deref())?;
         let host_line = if srv.port == 64738 {
             srv.host.clone()
         } else {
@@ -91,7 +93,7 @@ fn render_picker(
             links,
             r#"<a class="server" href="{href}"><div class="title">{title}</div><div class="host">{host}</div></a>"#,
             href = escape_html(&mumble_url),
-            title = escape_html(title),
+            title = escape_html(&title),
             host = escape_html(&host_line),
         );
     }
@@ -129,6 +131,7 @@ fn build_mumble_url(
     srv: &MumbleServer,
     username: &str,
     jwt: &str,
+    title: &str,
     url_param: Option<&str>,
 ) -> Result<String, AppError> {
     let mut url = Url::parse(&format!("mumble://{}:{}/", srv.host, srv.port))
@@ -139,9 +142,7 @@ fn build_mumble_url(
         .map_err(|_| AppError::Internal("set password failed".into()))?;
     {
         let mut q = url.query_pairs_mut();
-        if let Some(t) = srv.title.as_deref() {
-            q.append_pair("title", t);
-        }
+        q.append_pair("title", title);
         if let Some(u) = url_param {
             q.append_pair("url", u);
         }

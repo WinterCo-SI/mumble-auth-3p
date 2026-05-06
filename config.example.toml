@@ -2,7 +2,10 @@
 # Default lookup is ./config.toml; override with `eve-mumble-bridge <path>`.
 
 # Required.
-public_url = "http://localhost:8080"
+public_url   = "http://localhost:8080"
+# Cluster name shown in the picker page and in each mumble:// ?title=
+# query param. The full title becomes "{cluster_name} ({server.name})".
+cluster_name = "Brave Voice"
 
 # Optional.
 bind_addr  = "0.0.0.0:8080"
@@ -37,13 +40,13 @@ auth_token = "replace_me_with_a_long_random_string"
 
 # Mumble servers offered on the picker page. At least one is required.
 [[servers]]
-host  = "mumble.eu.example.com"
-port  = 64738       # optional, defaults to 64738
-title = "EU"        # optional; falls back to the host string
+host = "mumble.eu.example.com"
+port = 64738       # optional, defaults to 64738
+name = "EU"        # optional; falls back to the host string
 
 [[servers]]
-host  = "mumble.us.example.com"
-title = "US"
+host = "mumble.us.example.com"
+name = "US"
 
 # Whitelist + groups.
 # Anyone matching ANY entry under [whitelist] is admitted. Their groups are

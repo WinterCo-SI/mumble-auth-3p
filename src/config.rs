@@ -15,6 +15,7 @@ pub struct Config {
     pub public_url: String,
     pub public_domain: String,
     pub log_filter: String,
+    pub cluster_name: String,
     pub eve_client_id: String,
     pub eve_client_secret: String,
     pub esi_compatibility_date: String,
@@ -32,7 +33,7 @@ pub struct MumbleServer {
     #[serde(default = "default_mumble_port")]
     pub port: u16,
     #[serde(default)]
-    pub title: Option<String>,
+    pub name: Option<String>,
 }
 
 fn default_mumble_port() -> u16 {
@@ -42,6 +43,7 @@ fn default_mumble_port() -> u16 {
 #[derive(Debug, Deserialize)]
 struct ConfigFile {
     public_url: String,
+    cluster_name: String,
     #[serde(default = "default_bind_addr")]
     bind_addr: String,
     #[serde(default = "default_log_filter")]
@@ -131,6 +133,9 @@ impl Config {
             .ok_or_else(|| anyhow!("public_url has no host"))?
             .to_string();
 
+        if raw.cluster_name.trim().is_empty() {
+            return Err(anyhow!("cluster_name must not be empty"));
+        }
         if raw.mumble.auth_token.trim().is_empty() {
             return Err(anyhow!("mumble.auth_token must not be empty"));
         }
@@ -150,6 +155,7 @@ impl Config {
             public_url,
             public_domain,
             log_filter: raw.log_filter,
+            cluster_name: raw.cluster_name,
             eve_client_id: raw.eve.client_id,
             eve_client_secret: raw.eve.client_secret,
             esi_compatibility_date: raw.esi.compatibility_date,
