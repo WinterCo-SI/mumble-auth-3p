@@ -58,6 +58,25 @@ pub async fn handle(
     State(s): State<AppState>,
     Json(req): Json<AuthRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
+    let username = req.username.clone();
+    match run_auth(&s, req).await {
+        Ok(resp) => {
+            tracing::info!(
+                user_id = resp.user_id,
+                display_name = %resp.display_name,
+                groups = ?resp.groups,
+                "auth granted"
+            );
+            Ok(Json(resp))
+        }
+        Err(e) => {
+            tracing::warn!(username = %username, error = %e, "auth denied");
+            Err(e)
+        }
+    }
+}
+
+async fn run_auth(s: &AppState, req: AuthRequest) -> Result<AuthResponse, AppError> {
     let claims = s.sso.verify_access_token(&req.password).await?;
     let char_id = claims.character_id()?;
 
@@ -108,11 +127,11 @@ pub async fn handle(
     };
     let display_name = build_display_name(alliance_ticker.as_deref(), corp_ticker.as_deref(), &claims.name);
 
-    Ok(Json(AuthResponse {
+    Ok(AuthResponse {
         user_id: char_id,
         display_name,
         groups: decision.groups,
-    }))
+    })
 }
 
 fn build_display_name(
