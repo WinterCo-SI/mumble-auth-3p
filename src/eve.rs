@@ -18,6 +18,7 @@ const OIDC_DISCOVERY_URL: &str =
     "https://login.eveonline.com/.well-known/openid-configuration";
 const ESI_BASE: &str = "https://esi.evetech.net";
 const REFRESH_TTL: Duration = Duration::from_secs(3600);
+const AFFILIATION_TTL: Duration = Duration::from_secs(3600);
 const ALLOWED_ISSUERS: &[&str] = &["login.eveonline.com", "https://login.eveonline.com"];
 
 // ---- OIDC discovery + JWKS ------------------------------------------------
@@ -294,6 +295,7 @@ impl EveClaims {
 pub struct EsiClient {
     http: reqwest::Client,
     compatibility_date: String,
+    affiliations: RwLock<HashMap<u64, (Affiliation, Instant)>>,
 }
 
 impl EsiClient {
@@ -301,10 +303,20 @@ impl EsiClient {
         Self {
             http,
             compatibility_date,
+            affiliations: RwLock::new(HashMap::new()),
         }
     }
 
     pub async fn affiliation(&self, char_id: u64) -> Result<Affiliation, AppError> {
+        {
+            let cache = self.affiliations.read().await;
+            if let Some((aff, fetched_at)) = cache.get(&char_id) {
+                if fetched_at.elapsed() < AFFILIATION_TTL {
+                    return Ok(aff.clone());
+                }
+            }
+        }
+
         let url = format!("{ESI_BASE}/characters/affiliation/");
         let res = self
             .http
@@ -314,9 +326,15 @@ impl EsiClient {
             .send()
             .await?;
         let list: Vec<Affiliation> = esi_json(res, "characters/affiliation").await?;
-        list.into_iter()
+        let aff = list
+            .into_iter()
             .next()
-            .ok_or_else(|| AppError::Upstream("empty affiliation response".into()))
+            .ok_or_else(|| AppError::Upstream("empty affiliation response".into()))?;
+        self.affiliations
+            .write()
+            .await
+            .insert(char_id, (aff.clone(), Instant::now()));
+        Ok(aff)
     }
 
     pub async fn alliance(&self, alliance_id: u64) -> Result<AllianceInfo, AppError> {

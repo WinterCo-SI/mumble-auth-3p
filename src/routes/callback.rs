@@ -6,7 +6,6 @@ use axum::{
     response::Html,
 };
 use serde::Deserialize;
-use url::Url;
 
 use crate::config::{Config, MumbleServer};
 use crate::error::AppError;
@@ -83,7 +82,7 @@ fn render_picker(
         let server_name = srv.name.as_deref().unwrap_or(&srv.host);
         let title = format!("{} ({})", cfg.cluster_name, server_name);
         let mumble_url =
-            build_mumble_url(srv, &username, jwt, &title, cfg.mumble_url.as_deref())?;
+            build_mumble_url(srv, &username, jwt, &title, cfg.mumble_url.as_deref());
         let host_line = if srv.port == 64738 {
             srv.host.clone()
         } else {
@@ -93,7 +92,7 @@ fn render_picker(
             links,
             r#"<a class="server" href="{href}"><div class="title">{title}</div><div class="host">{host}</div></a>"#,
             href = escape_html(&mumble_url),
-            title = title,
+            title = escape_html(&title),
             host = escape_html(&host_line),
         );
     }
@@ -183,21 +182,17 @@ fn build_mumble_url(
     jwt: &str,
     title: &str,
     url_param: Option<&str>,
-) -> Result<String, AppError> {
-    let mut url = Url::parse(&format!("mumble://{}:{}/", srv.host, srv.port))
-        .map_err(|e| AppError::Internal(format!("bad mumble base url: {e}")))?;
-    url.set_username(username)
-        .map_err(|_| AppError::Internal("set username failed".into()))?;
-    url.set_password(Some(jwt))
-        .map_err(|_| AppError::Internal("set password failed".into()))?;
-    {
-        let mut q = url.query_pairs_mut();
-        q.append_pair("title", title);
-        if let Some(u) = url_param {
-            q.append_pair("url", u);
-        }
+) -> String {
+    let mut url = format!(
+        "mumble://{username}:{jwt}@{host}:{port}/?title={title}",
+        host = srv.host,
+        port = srv.port,
+    );
+    if let Some(u) = url_param {
+        url.push_str("&url=");
+        url.push_str(u);
     }
-    Ok(url.into())
+    url
 }
 
 fn escape_html(s: &str) -> String {
