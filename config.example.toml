@@ -1,0 +1,62 @@
+# Full configuration for the EVE -> Mumble bridge.
+# Default lookup is ./config.toml; override with `eve-mumble-bridge <path>`.
+
+# Required.
+public_url = "http://localhost:8080"
+
+# Optional.
+bind_addr  = "0.0.0.0:8080"
+log_filter = "info,eve_mumble_bridge=debug,tower_http=debug"
+
+[eve]
+client_id     = "your_eve_app_client_id"
+client_secret = "your_eve_app_client_secret"
+
+[esi]
+# Sent as the X-Compatibility-Date header on every ESI request. Bump when
+# you've tested against newer ESI behaviour.
+compatibility_date = "2026-05-06"
+
+[jwt]
+# Enforce the exp claim on the EVE access token. Set to false if you want
+# Mumble sessions to outlive the token's normal ~20 minute expiry, paired
+# with max_age_seconds below.
+validate_exp = true
+# If set, reject tokens whose iat (issued-at) is older than this many seconds.
+# Independent of validate_exp -- you can use one, the other, or both.
+# max_age_seconds = 86400
+
+[mumble]
+# Shared bearer token the Mumble auth plugin must send as
+# `Authorization: Bearer <token>` on every POST /auth call.
+# Generate with e.g. `openssl rand -hex 32`.
+auth_token = "replace_me_with_a_long_random_string"
+# Optional. Becomes ?url=<value> on every mumble:// link in the picker page.
+# Mumble shows it as the website associated with the server entry.
+# url = "https://example.com"
+
+# Mumble servers offered on the picker page. At least one is required.
+[[servers]]
+host  = "mumble.eu.example.com"
+port  = 64738       # optional, defaults to 64738
+title = "EU"        # optional; falls back to the host string
+
+[[servers]]
+host  = "mumble.us.example.com"
+title = "US"
+
+# Whitelist + groups.
+# Anyone matching ANY entry under [whitelist] is admitted. Their groups are
+# the union of auto-generated entity groups (char_<id>, corp_<id>,
+# alliance_<id>) and any [groups.<name>] block whose rules they match.
+
+[whitelist]
+alliance_ids    = [99003581]
+corporation_ids = [98123456]
+character_ids   = [12345]
+
+[groups.officers]
+character_ids = [12345, 67890]
+
+[groups.brave]
+alliance_ids = [99003581]
