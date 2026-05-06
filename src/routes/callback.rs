@@ -3,7 +3,7 @@ use std::time::Instant;
 
 use axum::{
     extract::{Query, State},
-    response::Html,
+    response::{Html, IntoResponse, Redirect, Response},
 };
 use serde::Deserialize;
 
@@ -26,7 +26,7 @@ pub struct Params {
 pub async fn handle(
     State(s): State<AppState>,
     Query(p): Query<Params>,
-) -> Result<Html<String>, AppError> {
+) -> Result<Response, AppError> {
     if let Some(err) = p.error {
         return Err(AppError::BadRequest(format!(
             "EVE SSO error: {err} ({})",
@@ -41,13 +41,11 @@ pub async fn handle(
         .state
         .ok_or_else(|| AppError::BadRequest("missing state".into()))?;
 
-    let entry = s
-        .pkce
-        .remove(&state)
-        .map(|(_, v)| v)
-        .ok_or_else(|| AppError::BadRequest("unknown or expired state".into()))?;
+    let Some(entry) = s.pkce.remove(&state).map(|(_, v)| v) else {
+        return Ok(Redirect::to("/").into_response());
+    };
     if entry.expires_at < Instant::now() {
-        return Err(AppError::BadRequest("state expired".into()));
+        return Ok(Redirect::to("/").into_response());
     }
 
     let token = s
@@ -66,7 +64,8 @@ pub async fn handle(
         char_id,
         &token.access_token,
         &s.cfg,
-    )?))
+    )?)
+    .into_response())
 }
 
 fn render_picker(
