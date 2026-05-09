@@ -91,7 +91,7 @@ fn render_picker(
             links,
             r#"<a class="server" href="{href}"><div class="title">{title}</div><div class="host">{host}</div></a>"#,
             href = escape_html(&mumble_url),
-            title = escape_html(&title),
+            title = escape_html(&server_name),
             host = escape_html(&host_line),
         );
     }
@@ -125,7 +125,7 @@ fn render_picker(
 </head>
 <body>
 <h1>Welcome, {name}</h1>
-<p>Pick a Mumble server:</p>
+<p>Click on a Mumble server to connect, or drag the link into the Favorite Servers list:</p>
 {links}
 <h2>Or connect manually</h2>
 <div class="cred-row">

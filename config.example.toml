@@ -3,7 +3,7 @@
 
 # Required.
 public_url   = "http://localhost:8080"
-# Cluster name shown in the picker page and in each mumble:// ?title=
+# Cluster name shown in each mumble:// ?title=
 # query param. The full title becomes "{cluster_name} ({server.name})".
 cluster_name = "Brave Voice"
 
