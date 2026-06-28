@@ -59,7 +59,9 @@ name = "US"
 # Whitelist + groups.
 # Anyone matching ANY entry under [whitelist] is admitted. Their groups are
 # the union of auto-generated entity groups (char_<id>, corp_<id>,
-# alliance_<id>) and any [groups.<name>] block whose rules they match.
+# alliance_<id>), ticker groups ({alliance_ticker}, {corp_ticker},
+# {alliance_ticker}>{corp_ticker}), and any [groups.<name>] block whose rules
+# they match.
 
 [whitelist]
 alliance_ids    = [99003581]

@@ -125,12 +125,21 @@ async fn run_auth(s: &AppState, req: AuthRequest) -> Result<AuthResponse, AppErr
         },
         None => None,
     };
-    let display_name = build_display_name(alliance_ticker.as_deref(), corp_ticker.as_deref(), &claims.name);
+    let display_name = build_display_name(
+        alliance_ticker.as_deref(),
+        corp_ticker.as_deref(),
+        &claims.name,
+    );
+    let mut groups = decision.groups;
+    groups.extend(build_ticker_groups(
+        alliance_ticker.as_deref(),
+        corp_ticker.as_deref(),
+    ));
 
     Ok(AuthResponse {
         user_id: char_id,
         display_name,
-        groups: decision.groups,
+        groups,
     })
 }
 
@@ -150,6 +159,24 @@ fn build_display_name(
     parts.join("-")
 }
 
+fn build_ticker_groups(alliance_ticker: Option<&str>, corp_ticker: Option<&str>) -> Vec<String> {
+    let alliance_ticker = alliance_ticker.filter(|s| !s.is_empty());
+    let corp_ticker = corp_ticker.filter(|s| !s.is_empty());
+    let mut groups = Vec::with_capacity(3);
+
+    if let Some(t) = alliance_ticker {
+        groups.push(t.to_string());
+    }
+    if let Some(t) = corp_ticker {
+        groups.push(t.to_string());
+    }
+    if let (Some(alliance), Some(corp)) = (alliance_ticker, corp_ticker) {
+        groups.push(format!("{alliance}>{corp}"));
+    }
+
+    groups
+}
+
 fn ct_eq(a: &[u8], b: &[u8]) -> bool {
     if a.len() != b.len() {
         return false;
@@ -158,4 +185,55 @@ fn ct_eq(a: &[u8], b: &[u8]) -> bool {
         .zip(b.iter())
         .fold(0u8, |acc, (x, y)| acc | (x ^ y))
         == 0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{build_display_name, build_ticker_groups};
+
+    #[test]
+    fn display_name_uses_known_tickers() {
+        assert_eq!(
+            build_display_name(Some("ALLY"), Some("CORP"), "Pilot Name"),
+            "ALLY-CORP-Pilot Name"
+        );
+    }
+
+    #[test]
+    fn display_name_skips_missing_tickers() {
+        assert_eq!(
+            build_display_name(None, Some("CORP"), "Pilot Name"),
+            "CORP-Pilot Name"
+        );
+        assert_eq!(
+            build_display_name(Some("ALLY"), None, "Pilot Name"),
+            "ALLY-Pilot Name"
+        );
+        assert_eq!(build_display_name(None, None, "Pilot Name"), "Pilot Name");
+    }
+
+    #[test]
+    fn ticker_groups_include_alliance_corp_and_pair() {
+        assert_eq!(
+            build_ticker_groups(Some("ALLY"), Some("CORP")),
+            vec![
+                "ALLY".to_string(),
+                "CORP".to_string(),
+                "ALLY>CORP".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn ticker_groups_skip_missing_tickers() {
+        assert_eq!(
+            build_ticker_groups(None, Some("CORP")),
+            vec!["CORP".to_string()]
+        );
+        assert_eq!(
+            build_ticker_groups(Some("ALLY"), None),
+            vec!["ALLY".to_string()]
+        );
+        assert!(build_ticker_groups(Some(""), Some("")).is_empty());
+    }
 }

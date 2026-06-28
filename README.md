@@ -83,13 +83,15 @@ Response:
 {
   "user_id": 91234567,
   "display_name": "BRAVE-BRN-Pilot Name",
-  "groups": ["char_91234567", "corp_98123456", "alliance_99003581", "officers"]
+  "groups": ["char_91234567", "corp_98123456", "alliance_99003581", "BRAVE", "BRN", "BRAVE>BRN", "officers"]
 }
 ```
 
 `display_name` is `{alliance_ticker}-{corp_ticker}-{character_name}`, with
 either ticker dropped when unknown. Tickers come from a persistent on-disk
-cache (`cache.path`); entries are immutable once written.
+cache (`cache.path`); entries are immutable once written. The same known
+tickers are also added as automatic Mumble groups: `{alliance_ticker}`,
+`{corp_ticker}`, and `{alliance_ticker}>{corp_ticker}` when both are known.
 
 ## Configuration
 
@@ -106,7 +108,8 @@ inline comments. The interesting bits:
   `character_ids` entry is admitted. Empty whitelist means no one gets in.
 - **`[groups.<name>]`** — same shape as `[whitelist]`. A user gets the named
   group if they match its rules. Auto-generated groups (`char_<id>`,
-  `corp_<id>`, `alliance_<id>`) are added on top.
+  `corp_<id>`, `alliance_<id>`, plus known alliance/corp ticker groups) are
+  added on top.
 - **`[jwt]`** — `validate_exp` enforces the token's ~20-minute expiry.
   `max_age_seconds` is an independent ceiling on token age (uses the `iat`
   claim). Use one, the other, or both.
