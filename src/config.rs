@@ -57,8 +57,7 @@ struct ConfigFile {
     mumble: MumbleSection,
     #[serde(default)]
     servers: Vec<MumbleServer>,
-    #[serde(default)]
-    whitelist: TierList,
+    whitelist: Option<TierList>,
     #[serde(default)]
     groups: BTreeMap<String, TierList>,
     #[serde(default)]
@@ -210,5 +209,32 @@ mod tests {
         assert!(!cfg.mumble_auth_token.is_empty());
         assert_eq!(cfg.public_domain, "localhost");
         assert!(cfg.jwt_validate_exp);
+    }
+
+    #[test]
+    fn missing_whitelist_allows_everyone() {
+        let config = r#"
+public_url = "http://localhost:8080"
+cluster_name = "Test"
+
+[eve]
+client_id = "client-id"
+client_secret = "client-secret"
+
+[mumble]
+auth_token = "token"
+
+[[servers]]
+host = "mumble.example.com"
+"#;
+        let path = std::env::temp_dir().join(format!(
+            "mumble-auth-3p-config-{}.toml",
+            std::process::id()
+        ));
+        std::fs::write(&path, config).expect("write config");
+        let cfg = Config::from_file(&path).expect("config without whitelist");
+        std::fs::remove_file(&path).expect("remove config");
+
+        assert!(cfg.whitelist.whitelist.is_none());
     }
 }

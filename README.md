@@ -105,7 +105,8 @@ inline comments. The interesting bits:
 - **`mumble.auth_token`** — shared secret between this service and the Mumble
   auth plugin. Generate something long and random.
 - **`[whitelist]`** — anyone matching any `alliance_ids` / `corporation_ids` /
-  `character_ids` entry is admitted. Empty whitelist means no one gets in.
+  `character_ids` entry is admitted. If the section is omitted, everyone is
+  admitted. An explicitly empty `[whitelist]` section admits no one.
 - **`[groups.<name>]`** — same shape as `[whitelist]`. A user gets the named
   group if they match its rules. Auto-generated groups (`char_<id>`,
   `corp_<id>`, `alliance_<id>`, plus known alliance/corp ticker groups) are

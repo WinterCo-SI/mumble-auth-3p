@@ -5,7 +5,7 @@ use serde::Deserialize;
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct WhitelistConfig {
     #[serde(default)]
-    pub whitelist: TierList,
+    pub whitelist: Option<TierList>,
     #[serde(default)]
     pub groups: BTreeMap<String, TierList>,
 }
@@ -40,7 +40,11 @@ pub fn decide(
     alliance_id: Option<u64>,
     cfg: &WhitelistConfig,
 ) -> Decision {
-    if !cfg.whitelist.matches(char_id, corp_id, alliance_id) {
+    if cfg
+        .whitelist
+        .as_ref()
+        .is_some_and(|whitelist| !whitelist.matches(char_id, corp_id, alliance_id))
+    {
         return Decision { admitted: false, groups: Vec::new() };
     }
     let mut groups = vec![format!("char_{char_id}"), format!("corp_{corp_id}")];
@@ -59,7 +63,7 @@ pub fn decide(
 mod tests {
     use super::*;
 
-    fn cfg(whitelist: TierList, groups: &[(&str, TierList)]) -> WhitelistConfig {
+    fn cfg(whitelist: Option<TierList>, groups: &[(&str, TierList)]) -> WhitelistConfig {
         WhitelistConfig {
             whitelist,
             groups: groups.iter().map(|(k, v)| ((*k).to_string(), v.clone())).collect(),
@@ -75,14 +79,20 @@ mod tests {
     }
 
     #[test]
+    fn missing_whitelist_admits() {
+        let c = cfg(None, &[]);
+        assert!(decide(1, 2, Some(3), &c).admitted);
+    }
+
+    #[test]
     fn empty_whitelist_denies() {
-        let c = cfg(TierList::default(), &[]);
+        let c = cfg(Some(TierList::default()), &[]);
         assert!(!decide(1, 2, Some(3), &c).admitted);
     }
 
     #[test]
     fn alliance_admits_with_full_auto_groups() {
-        let c = cfg(tier(&[3], &[], &[]), &[]);
+        let c = cfg(Some(tier(&[3], &[], &[])), &[]);
         let d = decide(1, 2, Some(3), &c);
         assert!(d.admitted);
         assert!(d.groups.contains(&"char_1".into()));
@@ -92,19 +102,19 @@ mod tests {
 
     #[test]
     fn corp_admits() {
-        let c = cfg(tier(&[], &[2], &[]), &[]);
+        let c = cfg(Some(tier(&[], &[2], &[])), &[]);
         assert!(decide(1, 2, Some(3), &c).admitted);
     }
 
     #[test]
     fn character_admits_even_when_corp_and_alliance_unknown() {
-        let c = cfg(tier(&[], &[], &[1]), &[]);
+        let c = cfg(Some(tier(&[], &[], &[1])), &[]);
         assert!(decide(1, 2, None, &c).admitted);
     }
 
     #[test]
     fn no_alliance_skips_alliance_group() {
-        let c = cfg(tier(&[], &[2], &[]), &[]);
+        let c = cfg(Some(tier(&[], &[2], &[])), &[]);
         let d = decide(1, 2, None, &c);
         assert!(d.admitted);
         assert!(!d.groups.iter().any(|g| g.starts_with("alliance_")));
@@ -112,14 +122,14 @@ mod tests {
 
     #[test]
     fn unrelated_alliance_denies() {
-        let c = cfg(tier(&[999], &[], &[]), &[]);
+        let c = cfg(Some(tier(&[999], &[], &[])), &[]);
         assert!(!decide(1, 2, Some(3), &c).admitted);
     }
 
     #[test]
     fn named_group_matches_via_each_tier() {
         let c = cfg(
-            tier(&[3], &[], &[]),
+            Some(tier(&[3], &[], &[])),
             &[
                 ("officers", tier(&[], &[], &[1])),
                 ("brave",    tier(&[3], &[], &[])),
@@ -135,7 +145,7 @@ mod tests {
     #[test]
     fn named_group_excluded_when_overall_decision_is_deny() {
         let c = cfg(
-            TierList::default(),
+            Some(TierList::default()),
             &[("officers", tier(&[], &[], &[1]))],
         );
         let d = decide(1, 2, Some(3), &c);
