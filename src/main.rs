@@ -15,8 +15,7 @@ async fn main() -> anyhow::Result<()> {
 
     tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::try_new(&cfg.log_filter)
-                .unwrap_or_else(|_| EnvFilter::new("info")),
+            EnvFilter::try_new(&cfg.log_filter).unwrap_or_else(|_| EnvFilter::new("info")),
         )
         .init();
 

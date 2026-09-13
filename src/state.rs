@@ -37,6 +37,7 @@ impl AppState {
             JwtPolicy {
                 validate_exp: cfg.jwt_validate_exp,
                 max_age_seconds: cfg.jwt_max_age_seconds,
+                limit_authentication_to_expiry: cfg.jwt_limit_authentication_to_expiry,
             },
         );
         let esi = Arc::new(EsiClient::new(http, cfg.esi_compatibility_date.clone()));

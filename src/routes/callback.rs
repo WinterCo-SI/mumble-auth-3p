@@ -80,8 +80,7 @@ fn render_picker(
     for srv in &cfg.mumble_servers {
         let server_name = srv.name.as_deref().unwrap_or(&srv.host);
         let title = format!("{} ({})", cfg.cluster_name, server_name);
-        let mumble_url =
-            build_mumble_url(srv, &username, jwt, &title, cfg.mumble_url.as_deref());
+        let mumble_url = build_mumble_url(srv, &username, jwt, &title, cfg.mumble_url.as_deref());
         let host_line = if srv.port == 64738 {
             srv.host.clone()
         } else {

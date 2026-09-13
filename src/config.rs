@@ -21,6 +21,8 @@ pub struct Config {
     pub esi_compatibility_date: String,
     pub jwt_validate_exp: bool,
     pub jwt_max_age_seconds: Option<u64>,
+    pub jwt_limit_authentication_to_expiry: bool,
+    pub authentication_expiry_action: String,
     pub mumble_auth_token: String,
     pub mumble_url: Option<String>,
     pub mumble_servers: Vec<MumbleServer>,
@@ -90,6 +92,10 @@ struct JwtSection {
     validate_exp: bool,
     #[serde(default)]
     max_age_seconds: Option<u64>,
+    #[serde(default)]
+    limit_authentication_to_expiry: bool,
+    #[serde(default = "default_authentication_expiry_action")]
+    authentication_expiry_action: String,
 }
 
 impl Default for JwtSection {
@@ -97,6 +103,8 @@ impl Default for JwtSection {
         Self {
             validate_exp: default_validate_exp(),
             max_age_seconds: None,
+            limit_authentication_to_expiry: false,
+            authentication_expiry_action: default_authentication_expiry_action(),
         }
     }
 }
@@ -137,13 +145,15 @@ fn default_validate_exp() -> bool {
 fn default_cache_path() -> String {
     "./cache.json".into()
 }
+fn default_authentication_expiry_action() -> String {
+    "reject".into()
+}
 
 impl Config {
     pub fn from_file(path: &Path) -> Result<Self> {
         let toml_text = std::fs::read_to_string(path)
             .with_context(|| format!("read config file {}", path.display()))?;
-        let raw: ConfigFile =
-            toml::from_str(&toml_text).context("parse config toml")?;
+        let raw: ConfigFile = toml::from_str(&toml_text).context("parse config toml")?;
 
         let public_url = raw.public_url.trim_end_matches('/').to_string();
         let public_domain = Url::parse(&public_url)
@@ -159,9 +169,7 @@ impl Config {
             return Err(anyhow!("mumble.auth_token must not be empty"));
         }
         if raw.servers.is_empty() {
-            return Err(anyhow!(
-                "config must define at least one [[servers]] entry"
-            ));
+            return Err(anyhow!("config must define at least one [[servers]] entry"));
         }
         for s in &raw.servers {
             if s.host.trim().is_empty() {
@@ -180,6 +188,8 @@ impl Config {
             esi_compatibility_date: raw.esi.compatibility_date,
             jwt_validate_exp: raw.jwt.validate_exp,
             jwt_max_age_seconds: raw.jwt.max_age_seconds,
+            jwt_limit_authentication_to_expiry: raw.jwt.limit_authentication_to_expiry,
+            authentication_expiry_action: raw.jwt.authentication_expiry_action,
             mumble_auth_token: raw.mumble.auth_token,
             mumble_url: raw.mumble.url,
             mumble_servers: raw.servers,
@@ -203,8 +213,7 @@ mod tests {
 
     #[test]
     fn example_config_parses() {
-        let cfg =
-            Config::from_file(Path::new("config.example.toml")).expect("example config");
+        let cfg = Config::from_file(Path::new("config.example.toml")).expect("example config");
         assert!(!cfg.mumble_servers.is_empty());
         assert!(!cfg.mumble_auth_token.is_empty());
         assert_eq!(cfg.public_domain, "localhost");
@@ -227,10 +236,8 @@ auth_token = "token"
 [[servers]]
 host = "mumble.example.com"
 "#;
-        let path = std::env::temp_dir().join(format!(
-            "mumble-auth-3p-config-{}.toml",
-            std::process::id()
-        ));
+        let path =
+            std::env::temp_dir().join(format!("mumble-auth-3p-config-{}.toml", std::process::id()));
         std::fs::write(&path, config).expect("write config");
         let cfg = Config::from_file(&path).expect("config without whitelist");
         std::fs::remove_file(&path).expect("remove config");

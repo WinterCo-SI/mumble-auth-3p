@@ -12,10 +12,10 @@ use crate::error::AppError;
 pub struct JwtPolicy {
     pub validate_exp: bool,
     pub max_age_seconds: Option<u64>,
+    pub limit_authentication_to_expiry: bool,
 }
 
-const OIDC_DISCOVERY_URL: &str =
-    "https://login.eveonline.com/.well-known/openid-configuration";
+const OIDC_DISCOVERY_URL: &str = "https://login.eveonline.com/.well-known/openid-configuration";
 const ESI_BASE: &str = "https://esi.evetech.net";
 const REFRESH_TTL: Duration = Duration::from_secs(3600);
 const AFFILIATION_TTL: Duration = Duration::from_secs(3600);
@@ -122,9 +122,7 @@ impl EveSso {
 
         if let Some(max_age) = self.policy.max_age_seconds {
             let iat = data.claims.iat.ok_or_else(|| {
-                AppError::Unauthorized(
-                    "jwt missing iat (required by JWT_MAX_AGE_SECONDS)".into(),
-                )
+                AppError::Unauthorized("jwt missing iat (required by JWT_MAX_AGE_SECONDS)".into())
             })?;
             let now = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -177,9 +175,10 @@ impl EveSso {
         }
         // Unknown kid — could be a rotated key. Force a refresh once.
         let new = self.refresh_now().await?;
-        new.keys.get(kid).cloned().ok_or_else(|| {
-            AppError::Unauthorized(format!("unknown jwt kid {kid}"))
-        })
+        new.keys
+            .get(kid)
+            .cloned()
+            .ok_or_else(|| AppError::Unauthorized(format!("unknown jwt kid {kid}")))
     }
 
     async fn cache(&self) -> Result<CacheInner, AppError> {
@@ -276,15 +275,9 @@ pub struct EveClaims {
 
 impl EveClaims {
     pub fn character_id(&self) -> Result<u64, AppError> {
-        let id = self
-            .sub
-            .strip_prefix("CHARACTER:EVE:")
-            .ok_or_else(|| {
-                AppError::Unauthorized(format!(
-                    "sub not in CHARACTER:EVE:<id> form: {}",
-                    self.sub
-                ))
-            })?;
+        let id = self.sub.strip_prefix("CHARACTER:EVE:").ok_or_else(|| {
+            AppError::Unauthorized(format!("sub not in CHARACTER:EVE:<id> form: {}", self.sub))
+        })?;
         id.parse::<u64>()
             .map_err(|e| AppError::Unauthorized(format!("sub id parse: {e}")))
     }

@@ -45,7 +45,10 @@ pub fn decide(
         .as_ref()
         .is_some_and(|whitelist| !whitelist.matches(char_id, corp_id, alliance_id))
     {
-        return Decision { admitted: false, groups: Vec::new() };
+        return Decision {
+            admitted: false,
+            groups: Vec::new(),
+        };
     }
     let mut groups = vec![format!("char_{char_id}"), format!("corp_{corp_id}")];
     if let Some(a) = alliance_id {
@@ -56,7 +59,10 @@ pub fn decide(
             groups.push(name.clone());
         }
     }
-    Decision { admitted: true, groups }
+    Decision {
+        admitted: true,
+        groups,
+    }
 }
 
 #[cfg(test)]
@@ -66,7 +72,10 @@ mod tests {
     fn cfg(whitelist: Option<TierList>, groups: &[(&str, TierList)]) -> WhitelistConfig {
         WhitelistConfig {
             whitelist,
-            groups: groups.iter().map(|(k, v)| ((*k).to_string(), v.clone())).collect(),
+            groups: groups
+                .iter()
+                .map(|(k, v)| ((*k).to_string(), v.clone()))
+                .collect(),
         }
     }
 
@@ -132,8 +141,8 @@ mod tests {
             Some(tier(&[3], &[], &[])),
             &[
                 ("officers", tier(&[], &[], &[1])),
-                ("brave",    tier(&[3], &[], &[])),
-                ("hq_corp",  tier(&[], &[2], &[])),
+                ("brave", tier(&[3], &[], &[])),
+                ("hq_corp", tier(&[], &[2], &[])),
             ],
         );
         let d = decide(1, 2, Some(3), &c);

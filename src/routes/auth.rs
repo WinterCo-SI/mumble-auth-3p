@@ -21,6 +21,9 @@ pub struct AuthResponse {
     pub user_id: u64,
     pub display_name: String,
     pub groups: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authenticated_until: Option<String>,
+    pub authentication_expiry_action: String,
 }
 
 /// Marker extractor that succeeds when a valid `Authorization: Bearer <token>`
@@ -140,6 +143,27 @@ async fn run_auth(s: &AppState, req: AuthRequest) -> Result<AuthResponse, AppErr
         user_id: char_id,
         display_name,
         groups,
+        authenticated_until: if s.cfg.jwt_limit_authentication_to_expiry {
+            authentication_deadline(&claims, s.cfg.jwt_max_age_seconds)
+        } else {
+            None
+        },
+        authentication_expiry_action: s.cfg.authentication_expiry_action.clone(),
+    })
+}
+
+fn authentication_deadline(claims: &crate::eve::EveClaims, max_age: Option<u64>) -> Option<String> {
+    let mut deadline = claims.exp;
+    if let (Some(iat), Some(age)) = (claims.iat, max_age) {
+        let d = iat.saturating_add(age);
+        deadline = Some(deadline.map_or(d, |e| e.min(d)));
+    }
+    deadline.map(|ts| {
+        let t = std::time::UNIX_EPOCH + std::time::Duration::from_secs(ts);
+        let secs = t.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+        chrono::DateTime::<chrono::Utc>::from_timestamp(secs as i64, 0)
+            .map(|d| d.to_rfc3339_opts(chrono::SecondsFormat::Secs, true))
+            .unwrap()
     })
 }
 
