@@ -146,7 +146,7 @@ fn default_cache_path() -> String {
     "./cache.json".into()
 }
 fn default_authentication_expiry_action() -> String {
-    "reject".into()
+    "kick".into()
 }
 
 impl Config {

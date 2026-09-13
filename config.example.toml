@@ -28,6 +28,10 @@ validate_exp = true
 # If set, reject tokens whose iat (issued-at) is older than this many seconds.
 # Independent of validate_exp -- you can use one, the other, or both.
 # max_age_seconds = 86400
+# Limit Mumble authentication to the earlier JWT expiry or max age deadline.
+# limit_authentication_to_expiry = true
+# Action to return when authentication expires.
+# authentication_expiry_action = "kick"
 
 [cache]
 # Persistent on-disk cache of alliance and corporation tickers, resolved

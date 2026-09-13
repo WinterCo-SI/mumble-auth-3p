@@ -153,11 +153,10 @@ async fn run_auth(s: &AppState, req: AuthRequest) -> Result<AuthResponse, AppErr
 }
 
 fn authentication_deadline(claims: &crate::eve::EveClaims, max_age: Option<u64>) -> Option<String> {
-    let mut deadline = claims.exp;
-    if let (Some(iat), Some(age)) = (claims.iat, max_age) {
-        let d = iat.saturating_add(age);
-        deadline = Some(deadline.map_or(d, |e| e.min(d)));
-    }
+    let deadline = match max_age {
+        Some(age) => claims.iat.map(|iat| iat.saturating_add(age)),
+        None => claims.exp,
+    };
     deadline.map(|ts| {
         let t = std::time::UNIX_EPOCH + std::time::Duration::from_secs(ts);
         let secs = t.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
