@@ -27,7 +27,7 @@ GET  /callback?code ─►  exchange code        ─►   token endpoint
 
                                                                        click
                                                                   ─►   user@host
-                                                                       password=z<compressed JWT>
+                                                                       password=z<compact JWS>
 
 POST /auth          ◄─  Bearer auth_token, JSON {username, password}    ◄─  plugin
                         verify JWT signature + iss/aud/exp/iat
@@ -36,10 +36,13 @@ POST /auth          ◄─  Bearer auth_token, JSON {username, password}    ◄�
                    ─►   {user_id, display_name, groups}                 ─►  plugin
 ```
 
-The Mumble password is `z<base64url(zlib(eve_jwt))>`. The bridge expands and
-re-validates it on every `/auth` call, so a Mumble reconnect after the token
-expires fails naturally (the user just logs in again). A raw EVE JWT is also
-accepted for existing credentials.
+The Mumble password is `z<base64url(compact JWS)>`. The compact form stores
+the decoded header and payload lengths, zlib-compresses the decoded header and
+payload bytes, and keeps the signature as raw bytes. It depends only on the
+three-segment compact JWS structure. The bridge expands and re-validates it on
+every `/auth` call, so a Mumble reconnect after the token expires fails
+naturally (the user just logs in again). A raw EVE JWT is also accepted for
+existing credentials.
 
 ## Quick start
 
@@ -75,7 +78,7 @@ Headers: `Authorization: Bearer <mumble.auth_token>`
 Request:
 
 ```json
-{ "username": "<character_id>@<public_domain>", "password": "z<base64url(zlib(eve_jwt))>" }
+{ "username": "<character_id>@<public_domain>", "password": "z<base64url(compact JWS)>" }
 ```
 
 Response:
