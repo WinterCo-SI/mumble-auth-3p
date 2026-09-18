@@ -27,7 +27,7 @@ GET  /callback?code ─►  exchange code        ─►   token endpoint
 
                                                                        click
                                                                   ─►   user@host
-                                                                       password=JWT
+                                                                       password=z<compressed JWT>
 
 POST /auth          ◄─  Bearer auth_token, JSON {username, password}    ◄─  plugin
                         verify JWT signature + iss/aud/exp/iat
@@ -36,9 +36,10 @@ POST /auth          ◄─  Bearer auth_token, JSON {username, password}    ◄�
                    ─►   {user_id, display_name, groups}                 ─►  plugin
 ```
 
-The Mumble password is the user's EVE access token. The bridge re-validates it
-on every `/auth` call, so a Mumble reconnect after the token expires fails
-naturally (the user just logs in again).
+The Mumble password is `z<base64url(zlib(eve_jwt))>`. The bridge expands and
+re-validates it on every `/auth` call, so a Mumble reconnect after the token
+expires fails naturally (the user just logs in again). A raw EVE JWT is also
+accepted for existing credentials.
 
 ## Quick start
 
@@ -74,7 +75,7 @@ Headers: `Authorization: Bearer <mumble.auth_token>`
 Request:
 
 ```json
-{ "username": "<character_id>@<public_domain>", "password": "<eve_jwt>" }
+{ "username": "<character_id>@<public_domain>", "password": "z<base64url(zlib(eve_jwt))>" }
 ```
 
 Response:

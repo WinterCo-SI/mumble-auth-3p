@@ -7,6 +7,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;
+use crate::password;
 use crate::state::AppState;
 use crate::whitelist::decide;
 
@@ -80,7 +81,8 @@ pub async fn handle(
 }
 
 async fn run_auth(s: &AppState, req: AuthRequest) -> Result<AuthResponse, AppError> {
-    let claims = s.sso.verify_access_token(&req.password).await?;
+    let jwt = password::decompress_password(&req.password)?;
+    let claims = s.sso.verify_access_token(&jwt).await?;
     let char_id = claims.character_id()?;
 
     // Mumble username is "<char_id>@<public_domain>". Strip the suffix and

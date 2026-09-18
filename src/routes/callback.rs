@@ -9,6 +9,7 @@ use serde::Deserialize;
 
 use crate::config::{Config, MumbleServer};
 use crate::error::AppError;
+use crate::password;
 use crate::state::AppState;
 
 #[derive(Deserialize)]
@@ -62,7 +63,7 @@ pub async fn handle(
     Ok(Html(render_picker(
         &claims.name,
         char_id,
-        &token.access_token,
+        &password::compress_password(&token.access_token)?,
         &s.cfg,
     )?)
     .into_response())
@@ -71,7 +72,7 @@ pub async fn handle(
 fn render_picker(
     char_name: &str,
     char_id: u64,
-    jwt: &str,
+    password: &str,
     cfg: &Config,
 ) -> Result<String, AppError> {
     let username = format!("{char_id}@{}", cfg.public_domain);
@@ -80,7 +81,8 @@ fn render_picker(
     for srv in &cfg.mumble_servers {
         let server_name = srv.name.as_deref().unwrap_or(&srv.host);
         let title = format!("{} ({})", cfg.cluster_name, server_name);
-        let mumble_url = build_mumble_url(srv, &username, jwt, &title, cfg.mumble_url.as_deref());
+        let mumble_url =
+            build_mumble_url(srv, &username, password, &title, cfg.mumble_url.as_deref());
         let host_line = if srv.port == 64738 {
             srv.host.clone()
         } else {
@@ -170,19 +172,19 @@ document.querySelectorAll('.cred-btn').forEach(btn => {{
         name = escape_html(char_name),
         links = links,
         username = escape_html(&username),
-        password = escape_html(jwt),
+        password = escape_html(password),
     ))
 }
 
 fn build_mumble_url(
     srv: &MumbleServer,
     username: &str,
-    jwt: &str,
+    password: &str,
     title: &str,
     url_param: Option<&str>,
 ) -> String {
     let mut url = format!(
-        "mumble://{username}:{jwt}@{host}:{port}/?title={title}",
+        "mumble://{username}:{password}@{host}:{port}/?title={title}",
         host = srv.host,
         port = srv.port,
     );
